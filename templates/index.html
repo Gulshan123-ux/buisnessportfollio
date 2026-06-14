@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LendIQ — ML-Powered Digital Lending Portfolio</title>
+  <meta name="description" content="Machine learning powered digital lending portfolio optimizer."/>
+  <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+
+<!-- ══ SIGN IN SCREEN ══════════════════════════════════════ -->
+<div id="signin-screen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">📊</div>
+    <div class="auth-brand"><span>Lend</span>IQ <span class="ml-badge">ML</span></div>
+    <div class="auth-sub">ML-Powered Digital Lending Intelligence</div>
+    <h2 class="auth-title">Welcome Back</h2>
+    <div class="auth-field"><label>Email</label><input id="si-email" type="email" placeholder="you@lendiq.ai" autocomplete="email"/></div>
+    <div class="auth-field"><label>Password</label><input id="si-pass" type="password" placeholder="••••••••" autocomplete="current-password"/></div>
+    <div id="si-error" class="auth-error"></div>
+    <button class="auth-btn" onclick="handleSignIn()">Sign In →</button>
+    <div class="auth-switch">Don't have an account? <a href="#" onclick="showScreen('signup')">Sign Up</a></div>
+    <div class="auth-demo-note">Demo: any email + password works</div>
+  </div>
+</div>
+
+<!-- ══ SIGN UP SCREEN ══════════════════════════════════════ -->
+<div id="signup-screen" class="auth-screen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">📊</div>
+    <div class="auth-brand"><span>Lend</span>IQ <span class="ml-badge">ML</span></div>
+    <div class="auth-sub">Start your free portfolio analysis</div>
+    <h2 class="auth-title">Create Account</h2>
+    <div class="auth-field"><label>Full Name</label><input id="su-name" type="text" placeholder="Rahul Sharma" autocomplete="name"/></div>
+    <div class="auth-field"><label>Email</label><input id="su-email" type="email" placeholder="you@lendiq.ai" autocomplete="email"/></div>
+    <div class="auth-field"><label>Password</label><input id="su-pass" type="password" placeholder="Min 8 characters" autocomplete="new-password"/></div>
+    <div class="auth-field"><label>Organisation</label><input id="su-org" type="text" placeholder="NBFC / Bank / Fintech"/></div>
+    <div id="su-error" class="auth-error"></div>
+    <button class="auth-btn" onclick="handleSignUp()">Create Account →</button>
+    <div class="auth-switch">Already have an account? <a href="#" onclick="showScreen('signin')">Sign In</a></div>
+  </div>
+</div>
+
+<!-- ══ UPLOAD SCREEN ════════════════════════════════════ -->
+<div id="upload-screen">
+  <div class="upload-hero">
+    <div class="upload-brand">
+      <div class="upload-brand-logo">📊</div>
+      <div class="upload-brand-name"><span>Lend</span>IQ <span class="ml-badge">ML</span></div>
+      <div class="upload-brand-sub">Machine Learning Powered Digital Lending Portfolio Optimizer<br>
+        Random Forest · Isolation Forest · K-Means · Gradient Boosting
+      </div>
+    </div>
+    <div class="upload-options">
+      <div class="upload-option-card" id="opt-demo" onclick="selectOption('demo')">
+        <div class="uoc-icon">🎯</div>
+        <div class="uoc-title">Try Demo Data</div>
+        <div class="uoc-desc">Generate 2,000 synthetic loans instantly.<br>ML models train automatically.</div>
+      </div>
+      <div class="upload-option-card" id="opt-upload" onclick="selectOption('upload')">
+        <div class="uoc-icon">📁</div>
+        <div class="uoc-title">Upload Your CSV</div>
+        <div class="uoc-desc">Load your own portfolio data.<br>Auto column mapping + ML training.</div>
+      </div>
+    </div>
+    <div class="drop-zone" id="drop-zone" style="display:none"
+         onclick="document.getElementById('csv-file-input').click()"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="handleDrop(event)">
+      <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="handleFileSelect(event)">
+      <div class="dz-icon">📂</div>
+      <div class="dz-title">Drag & drop your CSV here</div>
+      <div class="dz-sub">Any column names — Python backend auto-maps them</div>
+      <button class="dz-browse" onclick="event.stopPropagation();document.getElementById('csv-file-input').click()">Browse File</button>
+      <a href="/api/sample-csv" class="dz-sample" onclick="event.stopPropagation()">⬇ Download sample CSV template</a>
+    </div>
+    <div id="upload-status" style="display:none" class="upload-status-bar">
+      <div class="usb-spinner"></div>
+      <span id="upload-status-text">Training ML models…</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOADING SCREEN ════════════════════════════════════ -->
+<div id="loading-screen" style="display:none">
+  <div class="loader-logo">🤖</div>
+  <div class="loader-text">Training ML Models…</div>
+  <div class="loader-progress-track"><div class="loader-progress-fill" id="loader-bar"></div></div>
+  <div class="loader-status" id="loader-status">Initialising…</div>
+</div>
+
+<div id="tooltip"></div>
+
+<!-- ══ APP SHELL ════════════════════════════════════════ -->
+<div id="app" style="display:none">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">📊</div>
+      <div>
+        <div class="logo-text"><span>Lend</span>IQ <span class="ml-badge-sm">ML</span></div>
+        <div class="logo-subtitle">Portfolio Intelligence</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')"><span class="nav-icon">🏠</span> Dashboard</div>
+      <div class="nav-section-label">ML Risk Intelligence</div>
+      <div class="nav-item" data-page="risk" onclick="navigate('risk')"><span class="nav-icon">🤖</span> ML Risk Model</div>
+      <div class="nav-item" data-page="early-warning" onclick="navigate('early-warning')"><span class="nav-icon">⚡</span> Early Warning<span class="nav-badge" id="ew-badge">0</span></div>
+      <div class="nav-section-label">Portfolio</div>
+      <div class="nav-item" data-page="segments" onclick="navigate('segments')"><span class="nav-icon">🎯</span> Segments</div>
+      <div class="nav-item" data-page="cohorts" onclick="navigate('cohorts')"><span class="nav-icon">📅</span> Cohort Analysis</div>
+      <div class="nav-item" data-page="clusters" onclick="navigate('clusters')"><span class="nav-icon">🔵</span> ML Clusters</div>
+      <div class="nav-item" data-page="pricing" onclick="navigate('pricing')"><span class="nav-icon">💰</span> Pricing & ROI</div>
+      <div class="nav-section-label">Policy</div>
+      <div class="nav-item" data-page="recommendations" onclick="navigate('recommendations')"><span class="nav-icon">📋</span> ML Recommendations</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-stat"><span>Portfolio AUM</span><span class="val" id="sb-aum">—</span></div>
+      <div class="sidebar-stat"><span>Default Rate</span><span class="val" id="sb-dr">—</span></div>
+      <div class="sidebar-stat"><span>ML Default Prob</span><span class="val" id="sb-ml">—</span></div>
+      <div class="sidebar-stat"><span>Active Loans</span><span class="val" id="sb-loans">—</span></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <span class="topbar-title" id="page-title">Portfolio Dashboard</span>
+        <span class="topbar-subtitle" id="page-sub">Real-time ML-powered intelligence</span>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="topbar-chip"><div class="status-dot"></div><span id="live-chip-text">Live</span></div>
+      <div class="topbar-chip ml-chip">🤖 ML Active</div>
+      <div class="topbar-chip" style="cursor:pointer" onclick="refreshAll()">🔄 Refresh</div>
+      <button class="btn btn-ghost" id="back-btn" onclick="goBack()" style="display:none">← Back</button>
+      <button class="btn btn-primary" onclick="navigate('recommendations')">📋 ML Report</button>
+    </header>
+
+    <div class="content" id="content">
+
+      <!-- ── PAGE: DASHBOARD ───────────────────────────── -->
+      <div id="page-dashboard" class="page active">
+        <div class="kpi-grid fade-in-up">
+          <div class="kpi-card" style="--kpi-color:var(--primary)"><div class="kpi-icon">💼</div><div class="kpi-label">Total AUM</div><div class="kpi-value" id="kpi-aum">—</div><div class="kpi-delta up">↑ Portfolio Size</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--danger)"><div class="kpi-icon">⚠️</div><div class="kpi-label">Default Rate</div><div class="kpi-value danger" id="kpi-dr">—</div><div class="kpi-delta">vs 8% benchmark</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--purple)"><div class="kpi-icon">🤖</div><div class="kpi-label">ML Default Prob</div><div class="kpi-value" id="kpi-ml">—</div><div class="kpi-delta">Random Forest avg</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--warning)"><div class="kpi-icon">📉</div><div class="kpi-label">Delinquency Rate</div><div class="kpi-value warning" id="kpi-del">—</div><div class="kpi-delta">DPD 30+</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--accent)"><div class="kpi-icon">📊</div><div class="kpi-label">Avg Credit Score</div><div class="kpi-value accent" id="kpi-score">—</div><div class="kpi-delta">Portfolio average</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--success)"><div class="kpi-icon">💹</div><div class="kpi-label">Value Created</div><div class="kpi-value success" id="kpi-val">—</div><div class="kpi-delta up">Risk-adj. proxy</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--warning)"><div class="kpi-icon">📌</div><div class="kpi-label">At-Risk AUM</div><div class="kpi-value warning" id="kpi-atrisk">—</div><div class="kpi-delta down">Needs attention</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--primary)"><div class="kpi-icon">💸</div><div class="kpi-label">Avg Pricing Rate</div><div class="kpi-value" id="kpi-price">—</div><div class="kpi-delta">Annual interest</div></div>
+        </div>
+        <div class="chart-grid chart-grid-2 fade-in-up d2">
+          <div class="card"><div class="card-header"><span class="card-title">📈 Value by Cohort</span><span class="card-subtitle">Risk-adjusted value proxy</span></div><div class="card-body"><canvas id="chart-cohort-value" height="200"></canvas></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">🍩 Product Mix</span></div><div class="card-body" style="display:flex;flex-direction:column;align-items:center;gap:12px"><div class="donut-wrap" style="height:140px;width:140px"><canvas id="chart-product-donut" width="140" height="140"></canvas><div class="donut-label"><div class="dl-value" id="donut-center">5</div><div class="dl-text">Products</div></div></div><div id="donut-legend"></div></div></div>
+        </div>
+        <div class="chart-grid chart-grid-2 fade-in-up d3">
+          <div class="card"><div class="card-header"><span class="card-title">🌏 Default Rate by Geography</span></div><div class="card-body"><canvas id="chart-geo" height="180"></canvas></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">🏢 AUM by Employment</span></div><div class="card-body"><canvas id="chart-emp" height="180"></canvas></div></div>
+        </div>
+      </div>
+
+      <!-- ── PAGE: ML RISK MODEL ──────────────────────── -->
+      <div id="page-risk" class="page">
+        <div class="insight-card fade-in-up" style="margin-bottom:16px">
+          <div class="ic-icon">🤖</div>
+          <div><div class="ic-title">Random Forest Default Prediction Model</div>
+          <div class="ic-body">Trained on credit score, loan size, DTI, LTV, pricing rate, employment type, geography, and behavioral signals. Ensemble with Gradient Boosting for final probability estimates.</div></div>
+        </div>
+        <div class="kpi-grid fade-in-up d2" style="grid-template-columns:repeat(4,1fr)">
+          <div class="kpi-card" style="--kpi-color:var(--success)"><div class="kpi-icon">🟢</div><div class="kpi-label">Investment Grade (AAA–BBB)</div><div class="kpi-value success" id="risk-inv-grade">—</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--warning)"><div class="kpi-icon">🟡</div><div class="kpi-label">Speculative (BB–B)</div><div class="kpi-value warning" id="risk-spec">—</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--danger)"><div class="kpi-icon">🔴</div><div class="kpi-label">Distressed (CCC)</div><div class="kpi-value danger" id="risk-dist">—</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--purple)"><div class="kpi-icon">🤖</div><div class="kpi-label">Model AUC Score</div><div class="kpi-value" id="risk-auc">—</div></div>
+        </div>
+        <div class="chart-grid chart-grid-2 fade-in-up d3">
+          <div class="card"><div class="card-header"><span class="card-title">📊 Risk Grade Distribution</span></div><div class="card-body"><canvas id="chart-risk-dist" height="220"></canvas></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">🤖 Feature Importance (Random Forest)</span></div><div class="card-body"><canvas id="chart-feat-imp" height="220"></canvas></div></div>
+        </div>
+        <div class="card fade-in-up d4"><div class="card-header"><span class="card-title">🔬 ML Default Probability vs Credit Score</span><span class="card-subtitle">By risk grade · size = loan count</span></div><div class="card-body"><canvas id="chart-scatter" height="220"></canvas></div></div>
+        <div class="card fade-in-up d5"><div class="card-header"><span class="card-title">📋 Risk Grade Details + ML Probability</span></div><div class="card-body-flush"><div class="table-wrap"><table><thead><tr><th>Grade</th><th>Count</th><th>AUM</th><th>Actual Default %</th><th>ML Default Prob %</th></tr></thead><tbody id="risk-table-body"></tbody></table></div></div></div>
+      </div>
+
+      <!-- ── PAGE: EARLY WARNING ─────────────────────── -->
+      <div id="page-early-warning" class="page">
+        <div class="insight-card fade-in-up" style="margin-bottom:16px">
+          <div class="ic-icon">⚡</div>
+          <div><div class="ic-title">Isolation Forest + Rule-Based Early Warning System</div>
+          <div class="ic-body">Composite score: cashflow inconsistency (30pts) + balance volatility (25pts) + spending shock (20pts) + DTI (25pts) + Isolation Forest anomaly score. Blended 60% rule / 40% ML probability.</div></div>
+        </div>
+        <div class="kpi-grid fade-in-up d2" style="grid-template-columns:repeat(4,1fr)">
+          <div class="kpi-card" style="--kpi-color:var(--danger)"><div class="kpi-icon">🚨</div><div class="kpi-label">High Risk (>60)</div><div class="kpi-value danger" id="ew-high">—</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--warning)"><div class="kpi-icon">⚠️</div><div class="kpi-label">Medium Risk (40–60)</div><div class="kpi-value warning" id="ew-med">—</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--success)"><div class="kpi-icon">✅</div><div class="kpi-label">Low Risk (<40)</div><div class="kpi-value success" id="ew-low">—</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--primary)"><div class="kpi-icon">📊</div><div class="kpi-label">Spending Shocks</div><div class="kpi-value" id="ew-shocks">—</div></div>
+        </div>
+        <div class="chart-grid chart-grid-2 fade-in-up d3">
+          <div class="card"><div class="card-header"><span class="card-title">📊 Risk Score Distribution</span></div><div class="card-body"><canvas id="chart-ew-dist" height="200"></canvas></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">🚨 Top At-Risk Loans</span></div><div class="card-body" style="overflow-y:auto;max-height:220px"><div id="warning-list"></div></div></div>
+        </div>
+        <div class="card fade-in-up d4">
+          <div class="card-header"><span class="card-title">📋 Watch-List (Top 50 by ML Risk Score)</span>
+            <div class="filter-bar" style="margin-left:auto">
+              <select class="filter-select" id="ew-filter-grade" onchange="loadEarlyWarning()">
+                <option value="">All Grades</option>
+                <option>AAA</option><option>AA</option><option>A</option>
+                <option>BBB</option><option>BB</option><option>B</option><option>CCC</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body-flush"><div class="table-wrap"><table><thead><tr>
+            <th>Loan ID</th><th>ML Risk Score</th><th>ML Default Prob</th><th>Grade</th><th>Product</th><th>Geography</th><th>CF Score</th><th>DTI</th><th>Shock</th>
+          </tr></thead><tbody id="ew-table-body"></tbody></table></div></div>
+        </div>
+      </div>
+
+      <!-- ── PAGE: SEGMENTS ──────────────────────────── -->
+      <div id="page-segments" class="page">
+        <div class="filter-bar fade-in-up" style="margin-bottom:16px">
+          <span style="font-size:13px;color:var(--text-3)">Segment by:</span>
+          <button class="tab-btn active" id="seg-tab-geo" onclick="setSegmentTab('geography')">Geography</button>
+          <button class="tab-btn" id="seg-tab-emp" onclick="setSegmentTab('employment_type')">Employment</button>
+          <button class="tab-btn" id="seg-tab-prod" onclick="setSegmentTab('product_type')">Product</button>
+          <button class="tab-btn" id="seg-tab-channel" onclick="setSegmentTab('acquisition_channel')">Channel</button>
+        </div>
+        <div class="chart-grid chart-grid-2 fade-in-up d2">
+          <div class="card"><div class="card-header"><span class="card-title" id="seg-chart-title">📊 AUM by Segment</span></div><div class="card-body"><canvas id="chart-seg-aum" height="220"></canvas></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">💀 Default Rate by Segment</span></div><div class="card-body"><canvas id="chart-seg-dr" height="220"></canvas></div></div>
+        </div>
+        <div class="card fade-in-up d3"><div class="card-header"><span class="card-title">📋 Segment Deep-Dive + ML Default Prob</span></div><div class="card-body-flush"><div class="table-wrap"><table><thead><tr><th>Segment</th><th>Loans</th><th>Total AUM</th><th>Actual Default %</th><th>ML Default Prob %</th><th>Avg Score</th><th>Avg Pricing</th></tr></thead><tbody id="seg-table-body"></tbody></table></div></div></div>
+      </div>
+
+      <!-- ── PAGE: COHORTS ───────────────────────────── -->
+      <div id="page-cohorts" class="page">
+        <div class="insight-card fade-in-up" style="margin-bottom:16px">
+          <div class="ic-icon">📅</div>
+          <div><div class="ic-title">Cohort Analysis</div><div class="ic-body">Loans grouped into 6-month origination cohorts. ML Early Warning Scores averaged per cohort to detect seasoning risk trends.</div></div>
+        </div>
+        <div class="chart-grid chart-grid-2 fade-in-up d2">
+          <div class="card"><div class="card-header"><span class="card-title">📊 Default & Delinquency by Cohort</span></div><div class="card-body"><canvas id="chart-cohort-dr" height="200"></canvas></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">💹 Value Created by Cohort</span></div><div class="card-body"><canvas id="chart-cohort-vc" height="200"></canvas></div></div>
+        </div>
+        <div class="card fade-in-up d3"><div class="card-header"><span class="card-title">📋 Cohort Performance Matrix</span></div><div class="card-body-flush"><div class="table-wrap"><table><thead><tr><th>Cohort</th><th>Loans</th><th>Default Rate</th><th>Delinq Rate</th><th>Avg Pricing</th><th>Avg EW Score</th><th>Value Created</th></tr></thead><tbody id="cohort-table-body"></tbody></table></div></div></div>
+      </div>
+
+      <!-- ── PAGE: ML CLUSTERS ───────────────────────── -->
+      <div id="page-clusters" class="page">
+        <div class="insight-card fade-in-up" style="margin-bottom:16px">
+          <div class="ic-icon">🔵</div>
+          <div><div class="ic-title">K-Means Customer Segmentation (k=4)</div><div class="ic-body">Unsupervised K-Means clustering on standardized features identifies four distinct borrower profiles: Prime Borrowers, Growth Segment, Watch List, and High Risk.</div></div>
+        </div>
+        <div id="cluster-cards" class="kpi-grid fade-in-up d2" style="grid-template-columns:repeat(2,1fr)"></div>
+        <div class="chart-grid chart-grid-2 fade-in-up d3">
+          <div class="card"><div class="card-header"><span class="card-title">📊 Cluster AUM Comparison</span></div><div class="card-body"><canvas id="chart-cluster-aum" height="220"></canvas></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">⚡ Avg EW Score by Cluster</span></div><div class="card-body"><canvas id="chart-cluster-ew" height="220"></canvas></div></div>
+        </div>
+      </div>
+
+      <!-- ── PAGE: PRICING ───────────────────────────── -->
+      <div id="page-pricing" class="page">
+        <div class="kpi-grid fade-in-up" style="grid-template-columns:repeat(4,1fr)">
+          <div class="kpi-card" style="--kpi-color:var(--accent)"><div class="kpi-icon">💰</div><div class="kpi-label">Avg Pricing Rate</div><div class="kpi-value accent" id="pr-avg">—</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--success)"><div class="kpi-icon">📈</div><div class="kpi-label">Best ROI Product</div><div class="kpi-value success" id="pr-best">—</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--danger)"><div class="kpi-icon">📉</div><div class="kpi-label">Worst ROI Product</div><div class="kpi-value danger" id="pr-worst">—</div></div>
+          <div class="kpi-card" style="--kpi-color:var(--primary)"><div class="kpi-icon">💸</div><div class="kpi-label">Total Value Proxy</div><div class="kpi-value" id="pr-total">—</div></div>
+        </div>
+        <div class="chart-grid chart-grid-2 fade-in-up d2">
+          <div class="card"><div class="card-header"><span class="card-title">💰 Pricing by Risk Grade</span></div><div class="card-body"><canvas id="chart-pricing-grade" height="220"></canvas></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">📊 ML Default Prob by Product</span><span class="card-subtitle">Bubble size = loan count</span></div><div class="card-body"><canvas id="chart-value-dr" height="220"></canvas></div></div>
+        </div>
+        <div class="card fade-in-up d3"><div class="card-header"><span class="card-title">📋 Product Profitability + ML Risk</span></div><div class="card-body-flush"><div class="table-wrap"><table><thead><tr><th>Product</th><th>Loans</th><th>AUM</th><th>Default %</th><th>ML Default Prob</th><th>Avg Pricing</th><th>Value Proxy</th></tr></thead><tbody id="pricing-table-body"></tbody></table></div></div></div>
+      </div>
+
+      <!-- ── PAGE: RECOMMENDATIONS ───────────────────── -->
+      <div id="page-recommendations" class="page">
+        <div class="insight-card fade-in-up">
+          <div class="ic-icon">🎓</div>
+          <div><div class="ic-title">ML-Powered Credit Policy Recommendation Report</div><div class="ic-body">Generated by Random Forest + Gradient Boosting + Isolation Forest + K-Means models trained on your portfolio data.</div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px;margin-top:16px" id="rec-cards"></div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script src="/static/charts.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
