@@ -2,7 +2,34 @@
 
 const API = ''; // same origin
 
-// ── AUTH FLOW ──────────────────────────────────────────────
+// ── AUTH STORE (localStorage) ──────────────────────────────
+const AUTH = {
+  _key: 'lendiq_users_db',
+  _getDB() {
+    try { return JSON.parse(localStorage.getItem(this._key) || '{}'); } catch { return {}; }
+  },
+  _saveDB(db) { localStorage.setItem(this._key, JSON.stringify(db)); },
+  register(name, email, pass, org) {
+    const db = this._getDB();
+    const key = email.toLowerCase().trim();
+    if (db[key]) return { ok: false, error: 'An account with this email already exists. Please sign in.' };
+    db[key] = { name: name.trim(), email: key, pass, org: org || '', createdAt: Date.now() };
+    this._saveDB(db);
+    sessionStorage.setItem('lendiq_user', JSON.stringify({ email: key, name: name.trim() }));
+    return { ok: true };
+  },
+  login(email, pass) {
+    const db  = this._getDB();
+    const key = email.toLowerCase().trim();
+    const usr = db[key];
+    if (!usr) return { ok: false, error: 'No account found with this email. Please sign up first.' };
+    if (usr.pass !== pass) return { ok: false, error: 'Incorrect password. Please try again.' };
+    sessionStorage.setItem('lendiq_user', JSON.stringify({ email: key, name: usr.name }));
+    return { ok: true, user: usr };
+  },
+};
+
+// ── SCREEN ROUTER ──────────────────────────────────────────
 function showScreen(name) {
   // name: 'signin' | 'signup' | 'upload'
   document.getElementById('signin-screen').style.display = name === 'signin' ? 'flex' : 'none';
@@ -15,26 +42,62 @@ function handleSignIn() {
   const email = document.getElementById('si-email').value.trim();
   const pass  = document.getElementById('si-pass').value;
   const err   = document.getElementById('si-error');
-  if (!email || !pass) { err.textContent = 'Please enter email and password.'; return; }
-  if (!email.includes('@')) { err.textContent = 'Please enter a valid email.'; return; }
+  const btn   = document.querySelector('#signin-screen .auth-btn');
+
+  // Basic validation
+  if (!email || !pass) { err.textContent = '⚠ Please enter your email and password.'; return; }
+  if (!email.includes('@')) { err.textContent = '⚠ Please enter a valid email address.'; return; }
+  if (pass.length < 6)  { err.textContent = '⚠ Password must be at least 6 characters.'; return; }
+
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+
+  const result = AUTH.login(email, pass);
+  if (!result.ok) {
+    err.textContent = '❌ ' + result.error;
+    btn.textContent = 'Sign In →'; btn.disabled = false;
+    return;
+  }
+
   err.textContent = '';
-  // Store user session (demo)
-  sessionStorage.setItem('lendiq_user', JSON.stringify({ email, name: email.split('@')[0] }));
-  showScreen('upload');
+  // Show welcome then go to upload
+  btn.textContent = '✅ Welcome back, ' + result.user.name + '!';
+  setTimeout(() => {
+    btn.textContent = 'Sign In →'; btn.disabled = false;
+    showScreen('upload');
+  }, 900);
 }
 
 function handleSignUp() {
   const name  = document.getElementById('su-name').value.trim();
   const email = document.getElementById('su-email').value.trim();
   const pass  = document.getElementById('su-pass').value;
+  const org   = document.getElementById('su-org').value.trim();
   const err   = document.getElementById('su-error');
-  if (!name || !email || !pass) { err.textContent = 'Please fill all required fields.'; return; }
-  if (!email.includes('@')) { err.textContent = 'Please enter a valid email.'; return; }
-  if (pass.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
+  const btn   = document.querySelector('#signup-screen .auth-btn');
+
+  // Validation
+  if (!name)  { err.textContent = '⚠ Please enter your full name.'; return; }
+  if (!email || !email.includes('@')) { err.textContent = '⚠ Please enter a valid email address.'; return; }
+  if (!pass)  { err.textContent = '⚠ Please enter a password.'; return; }
+  if (pass.length < 6) { err.textContent = '⚠ Password must be at least 6 characters.'; return; }
+
+  btn.textContent = 'Creating account…'; btn.disabled = true;
+
+  const result = AUTH.register(name, email, pass, org);
+  if (!result.ok) {
+    err.textContent = '❌ ' + result.error;
+    btn.textContent = 'Create Account →'; btn.disabled = false;
+    return;
+  }
+
   err.textContent = '';
-  sessionStorage.setItem('lendiq_user', JSON.stringify({ email, name }));
-  showScreen('upload');
+  btn.textContent = '✅ Account created!';
+  setTimeout(() => {
+    btn.textContent = 'Create Account →'; btn.disabled = false;
+    showScreen('upload');
+  }, 900);
 }
+
 let currentPage = 'dashboard', segmentKey = 'geography';
 
 const fmt = {

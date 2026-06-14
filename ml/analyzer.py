@@ -12,20 +12,67 @@ class PortfolioAnalyzer:
         self.df = df.copy()
         self.ml = ml_models
 
-        # Attach ML scores
+        # ── Compute default_prob ─────────────────────────────
         if ml_models and ml_models.fitted:
-            self.df['default_prob'] = ml_models.predict_default(self.df)
-            self.df['early_warning_score'] = ml_models.early_warning_score(self.df)
-            self.df['cluster'] = ml_models.cluster_labels(self.df)
+            try:
+                probs = ml_models.predict_default(self.df)
+                # Sanity check: if all predictions are identical, use rule-based
+                if probs.std() < 0.001:
+                    self.df['default_prob'] = self._rule_default_prob()
+                else:
+                    self.df['default_prob'] = probs
+            except Exception:
+                self.df['default_prob'] = self._rule_default_prob()
         else:
-            self.df['default_prob'] = 0.0
-            self.df['early_warning_score'] = (
-                (1 - self.df['cashflow_consistency'].clip(0,1)) * 30 +
-                self.df['balance_volatility'].clip(0,1) * 25 +
-                self.df['spending_shock'].astype(float) * 20 +
-                self.df['dti_ratio'].clip(0,0.8) / 0.8 * 25
-            ).round(1).clip(0, 100)
+            self.df['default_prob'] = self._rule_default_prob()
+
+        # ── Compute early_warning_score ──────────────────────
+        if ml_models and ml_models.fitted:
+            try:
+                self.df['early_warning_score'] = ml_models.early_warning_score(self.df)
+            except Exception:
+                self.df['early_warning_score'] = self._rule_ew_score()
+        else:
+            self.df['early_warning_score'] = self._rule_ew_score()
+
+        # ── Cluster labels ───────────────────────────────────
+        if ml_models and ml_models.fitted:
+            try:
+                self.df['cluster'] = ml_models.cluster_labels(self.df)
+            except Exception:
+                self.df['cluster'] = 0
+        else:
             self.df['cluster'] = 0
+
+    def _rule_default_prob(self) -> pd.Series:
+        """Rule-based default probability from actual CSV features."""
+        d = self.df
+        # Base probability from credit grade
+        GRADE_PD = {'AAA':0.01,'AA':0.02,'A':0.04,'BBB':0.07,'BB':0.12,'B':0.20,'CCC':0.38}
+        grade_pd = d['credit_quality'].map(GRADE_PD).fillna(0.10)
+
+        # Adjust by DTI ratio (higher DTI = higher risk)
+        dti_adj = (d['dti_ratio'].clip(0, 0.8) / 0.8 * 0.15)
+
+        # Adjust by credit score (lower score = higher risk)
+        score_adj = ((750 - d['credit_score'].clip(300, 900)) / 750 * 0.10).clip(0, 0.10)
+
+        # If loan is already defaulted, probability = 1.0
+        prob = (grade_pd + dti_adj + score_adj).clip(0, 1)
+        prob = np.where(d['default_indicator'] == 1, 1.0, prob)
+        return np.round(prob, 4)
+
+    def _rule_ew_score(self) -> pd.Series:
+        """Rule-based early warning score 0–100."""
+        d = self.df
+        cf_score    = (1 - d['cashflow_consistency'].clip(0, 1)) * 30
+        bal_score   = d['balance_volatility'].clip(0, 1) * 25
+        shock_score = d['spending_shock'].astype(float) * 20
+        dti_score   = d['dti_ratio'].clip(0, 0.8) / 0.8 * 25
+        # Boost score for defaults and delinquent loans
+        status_boost = np.where(d['default_indicator'] == 1, 30,
+                       np.where(d['delinquency_status'] == 'DPD30+', 15, 0))
+        return (cf_score + bal_score + shock_score + dti_score + status_boost).clip(0, 100).round(1)
 
     # ── Portfolio KPI Metrics ─────────────────────────────
     def portfolio_metrics(self) -> dict:

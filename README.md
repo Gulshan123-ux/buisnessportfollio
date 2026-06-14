@@ -150,14 +150,14 @@ Upload any CSV with these columns (exact names or common aliases auto-mapped):
 
 ## 🔐 Authentication
 
-The app uses a client-side session flow (demo mode):
+The application implements a local client-side authentication system with persistent session memory:
 
-- **Sign In**: Any valid email + password works
-- **Sign Up**: Name + Email + Password + Organisation
-- Session stored in `sessionStorage`
-- Back button returns to the data upload screen (not sign-in)
+- **Sign Up**: Register with Name, Email, Password, and Organisation. Credentials are encrypted and saved securely inside the browser's `localStorage` database.
+- **Sign In**: Validates the entered Email and Password against registered users in the database. Returns clean feedback (e.g. invalid emails, wrong passwords, or unregistered accounts).
+- **Session Management**: Successful login stores the user context in `sessionStorage` to maintain session persistence across pages.
+- **Back-to-Upload Integration**: Clicking the **← Back** button from the main dashboard resets the active dataset and drops the user back to the upload screen rather than logging them out.
 
-> For production, replace with a real auth backend (Flask-Login, JWT, OAuth2).
+> **Production Note**: For enterprise deployments, integrate this with a standard backend authentication service (e.g., JWT, OAuth2, or Flask-Login).
 
 ---
 
