@@ -15,9 +15,7 @@ app  = Flask(__name__)
 CORS(app)
 app.secret_key = 'lendiq-ml-secret-42'
 
-# ── OpenAI setup ──────────────────────────────────────────
-OPENAI_API_KEY = "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"
-
+#
 try:
     from openai import OpenAI
     _openai_client = OpenAI(api_key=OPENAI_API_KEY)
